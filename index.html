@@ -1,0 +1,445 @@
+import React, { useState, useMemo, useEffect } from 'react';
+import { 
+  Search, 
+  Plus, 
+  ExternalLink, 
+  Trash2, 
+  TrendingDown, 
+  MapPin, 
+  Euro, 
+  Maximize2, 
+  LayoutGrid, 
+  List, 
+  Lock, 
+  LogOut, 
+  ShieldCheck, 
+  AlertCircle, 
+  Home, 
+  CheckCircle2, 
+  Clock, 
+  Ban, 
+  MessageSquare, 
+  Hammer, 
+  Heart, 
+  Pencil,
+  ImageIcon,
+  Camera
+} from 'lucide-react';
+
+// --- CONFIGURATION ---
+const APP_PASSWORD = "chaville2026"; 
+// ---------------------
+
+const STATUS_OPTIONS = [
+  { label: "À contacter", color: "bg-slate-100 text-slate-600 border-slate-200", icon: <MessageSquare className="w-3 h-3" /> },
+  { label: "En attente de visite", color: "bg-amber-100 text-amber-700 border-amber-200", icon: <Clock className="w-3 h-3" /> },
+  { label: "Déjà visité", color: "bg-blue-100 text-blue-700 border-blue-200", icon: <CheckCircle2 className="w-3 h-3" /> },
+  { label: "En cours de négociation", color: "bg-purple-100 text-purple-700 border-purple-200", icon: <TrendingDown className="w-3 h-3" /> },
+  { label: "Dossier déposé", color: "bg-green-100 text-green-700 border-green-200", icon: <ShieldCheck className="w-3 h-3" /> },
+  { label: "Refusé", color: "bg-red-100 text-red-700 border-red-200", icon: <Ban className="w-3 h-3" /> }
+];
+
+const INITIAL_DATA = [
+  {
+    id: 1,
+    ville: "Chaville",
+    quartier: "Rive Droite",
+    prix: 325000,
+    surface: 68,
+    pieces: 3,
+    statut: "En attente de visite",
+    travaux: "Rafraîchissement",
+    lien: "https://www.seloger.com/",
+    image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=400&q=80",
+    notes: "Bel appartement, proche de la forêt de Meudon.",
+    favori: true
+  }
+];
+
+const App = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [error, setError] = useState(false);
+  const [items, setItems] = useState(INITIAL_DATA);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+  const [viewMode, setViewMode] = useState('table');
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+
+  const [formState, setFormState] = useState({
+    ville: "Chaville", quartier: "", prix: 0, surface: 0, pieces: 3, statut: "À contacter", travaux: "Non", lien: "", image: "", notes: "", favori: false
+  });
+
+  useEffect(() => {
+    if (sessionStorage.getItem('isAuth') === 'true') setIsAuthenticated(true);
+  }, []);
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    if (passwordInput === APP_PASSWORD) {
+      setIsAuthenticated(true);
+      sessionStorage.setItem('isAuth', 'true');
+    } else {
+      setError(true);
+      setPasswordInput("");
+    }
+  };
+
+  const openAddModal = () => {
+    setEditingItem(null);
+    setFormState({ ville: "Chaville", quartier: "", prix: 0, surface: 0, pieces: 3, statut: "À contacter", travaux: "À vérifier", lien: "", image: "", notes: "", favori: false });
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (item) => {
+    setEditingItem(item);
+    setFormState({ ...item });
+    setIsModalOpen(true);
+  };
+
+  const handleSave = () => {
+    if (editingItem) {
+      setItems(items.map(i => i.id === editingItem.id ? { ...formState, id: editingItem.id } : i));
+    } else {
+      setItems([...items, { ...formState, id: Date.now() }]);
+    }
+    setIsModalOpen(false);
+  };
+
+  const updateItemStatus = (id, newStatus) => {
+    setItems(items.map(i => i.id === id ? { ...i, statut: newStatus } : i));
+  };
+
+  const toggleFavorite = (id) => {
+    setItems(items.map(i => i.id === id ? { ...i, favori: !i.favori } : i));
+  };
+
+  const stats = useMemo(() => {
+    const total = items.length;
+    const visitesOK = items.filter(i => i.statut === "Déjà visité").length;
+    const enAttente = items.filter(i => i.statut === "En attente de visite").length;
+    const favorisCount = items.filter(i => i.favori).length;
+    return { total, visitesOK, enAttente, favorisCount };
+  }, [items]);
+
+  const filteredItems = items.filter(item => {
+    const matchesSearch = item.ville.toLowerCase().includes(searchTerm.toLowerCase()) || item.quartier.toLowerCase().includes(searchTerm.toLowerCase());
+    return showFavoritesOnly ? (item.favori && matchesSearch) : matchesSearch;
+  });
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-[2rem] shadow-2xl p-6 md:p-10 font-sans">
+          <div className="flex flex-col items-center mb-8 text-slate-900">
+            <div className="bg-indigo-600 p-4 rounded-2xl mb-4 shadow-lg shadow-indigo-100">
+              <Heart className="text-white w-8 h-8 fill-white" />
+            </div>
+            <h1 className="text-xl md:text-2xl font-black uppercase tracking-tight text-center">Appart Nassim Sarah</h1>
+            <p className="text-slate-400 text-sm mt-1 font-bold text-center">Gestionnaire de recherche privé</p>
+          </div>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <input 
+              type="password"
+              className={`w-full px-6 py-4 bg-slate-50 border-2 rounded-2xl focus:border-indigo-600 focus:outline-none transition-all text-slate-900 font-bold ${error ? 'border-red-500 bg-red-50' : 'border-transparent'}`}
+              placeholder="Mot de passe"
+              value={passwordInput}
+              onChange={(e) => setPasswordInput(e.target.value)}
+            />
+            {error && <p className="text-red-500 text-xs font-bold text-center">Accès refusé. Vérifiez le mot de passe.</p>}
+            <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-2xl transition-all shadow-xl shadow-indigo-100 uppercase tracking-widest text-xs">Déverrouiller</button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 pb-20">
+      {/* --- HEADER --- */}
+      <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 h-16 md:h-20 flex items-center justify-between">
+          <div className="flex items-center gap-2 md:gap-3">
+            <div className="bg-indigo-600 p-1.5 md:p-2.5 rounded-lg md:rounded-xl shadow-lg shadow-indigo-100">
+              <Heart className="text-white w-4 h-4 md:w-6 md:h-6 fill-white" />
+            </div>
+            <div className="overflow-hidden">
+              <h1 className="text-sm md:text-xl font-black uppercase tracking-tight leading-none truncate">Appart <span className="text-indigo-600">Nassim Sarah</span></h1>
+              <span className="hidden xs:block text-[8px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none mt-1">Chaville / Viroflay</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 md:gap-4">
+            <button onClick={openAddModal} className="bg-indigo-600 hover:bg-indigo-700 text-white p-2 md:px-6 md:py-3 rounded-xl md:rounded-2xl text-xs md:text-sm font-bold flex items-center gap-2 shadow-lg shadow-indigo-100 transition-all">
+              <Plus className="w-4 h-4 md:w-5 md:h-5" /> 
+              <span className="hidden sm:inline">Ajouter</span>
+            </button>
+            <button onClick={() => {sessionStorage.removeItem('isAuth'); setIsAuthenticated(false);}} className="p-2 text-slate-400 hover:text-red-600 transition-colors">
+              <LogOut className="w-4 h-4 md:w-5 md:h-5" />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 py-6 md:py-10">
+        {/* --- STATS SECTION --- */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-10">
+          <div className="bg-white p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-4 md:gap-5">
+            <div className="bg-red-50 text-red-500 p-3 md:p-4 rounded-xl md:rounded-2xl">
+              <Heart className={stats.favorisCount > 0 ? "fill-red-500" : "w-5 h-5 md:w-6 md:h-6"} />
+            </div>
+            <div>
+              <p className="text-slate-400 text-[8px] md:text-[10px] font-black uppercase tracking-widest mb-0.5 md:mb-1">Coup de cœurs</p>
+              <p className="text-lg md:text-2xl font-black">{stats.favorisCount}</p>
+            </div>
+          </div>
+          <div className="bg-white p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-4 md:gap-5">
+            <div className="bg-blue-50 text-blue-600 p-3 md:p-4 rounded-xl md:rounded-2xl">
+              <List className="w-5 h-5 md:w-6 md:h-6" />
+            </div>
+            <div>
+              <p className="text-slate-400 text-[8px] md:text-[10px] font-black uppercase tracking-widest mb-0.5 md:mb-1">Total Annonces</p>
+              <p className="text-lg md:text-2xl font-black">{stats.total}</p>
+            </div>
+          </div>
+          <div className="bg-white p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-4 md:gap-5">
+            <div className="bg-emerald-50 text-emerald-600 p-3 md:p-4 rounded-xl md:rounded-2xl">
+              <CheckCircle2 className="w-5 h-5 md:w-6 md:h-6" />
+            </div>
+            <div>
+              <p className="text-slate-400 text-[8px] md:text-[10px] font-black uppercase tracking-widest mb-0.5 md:mb-1">Visites</p>
+              <p className="text-lg md:text-2xl font-black">{stats.visitesOK} <span className="text-slate-300 font-light mx-1">/</span> <span className="text-amber-500">{stats.enAttente}</span></p>
+            </div>
+          </div>
+        </div>
+
+        {/* --- FILTERS --- */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 md:mb-8">
+          <h2 className="text-lg md:text-2xl font-black text-slate-800 tracking-tight">Nos recherches ({filteredItems.length})</h2>
+          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+             <button 
+                onClick={() => setShowFavoritesOnly(!showFavoritesOnly)} 
+                className={`flex items-center gap-2 px-3 py-2 md:px-5 md:py-3 rounded-xl md:rounded-2xl text-xs md:text-sm font-bold transition-all border-2 flex-grow sm:flex-grow-0 justify-center ${showFavoritesOnly ? 'bg-red-50 border-red-200 text-red-600 shadow-md' : 'bg-white border-slate-100 text-slate-400 hover:border-red-100'}`}
+             >
+                <Heart className={`w-3.5 h-3.5 md:w-4 md:h-4 ${showFavoritesOnly ? 'fill-red-500 text-red-500' : ''}`} />
+                <span>{showFavoritesOnly ? "Favoris" : "Tout voir"}</span>
+             </button>
+             <div className="relative flex-grow sm:max-w-xs">
+                <Search className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-slate-400 w-3.5 h-3.5 md:w-4 md:h-4" />
+                <input type="text" placeholder="Filtrer..." className="w-full pl-9 md:pl-12 pr-4 md:pr-6 py-2 md:py-3 bg-white border-none rounded-xl md:rounded-2xl text-xs md:text-sm shadow-sm focus:ring-2 focus:ring-indigo-500 transition-all" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+             </div>
+             <div className="flex bg-white rounded-xl md:rounded-2xl p-1 border border-slate-200 shadow-sm">
+                <button onClick={() => setViewMode('table')} className={`p-2 rounded-lg md:rounded-xl transition-all ${viewMode === 'table' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400'}`}><List className="w-4 h-4 md:w-5 md:h-5" /></button>
+                <button onClick={() => setViewMode('grid')} className={`p-2 rounded-lg md:rounded-xl transition-all ${viewMode === 'grid' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400'}`}><LayoutGrid className="w-4 h-4 md:w-5 md:h-5" /></button>
+             </div>
+          </div>
+        </div>
+
+        {/* --- VIEW CONTENT --- */}
+        {viewMode === 'table' ? (
+          <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left min-w-[900px]">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-100 text-slate-400">
+                    <th className="px-6 py-4 text-[9px] md:text-[10px] font-black uppercase tracking-widest w-12 text-center">Fav.</th>
+                    <th className="px-6 py-4 text-[9px] md:text-[10px] font-black uppercase tracking-widest">Photo</th>
+                    <th className="px-6 py-4 text-[9px] md:text-[10px] font-black uppercase tracking-widest">Bien / Localisation</th>
+                    <th className="px-6 py-4 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-center">Prix / M²</th>
+                    <th className="px-6 py-4 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-center">Surface</th>
+                    <th className="px-6 py-4 text-[9px] md:text-[10px] font-black uppercase tracking-widest min-w-[200px]">Statut</th>
+                    <th className="px-6 py-4 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {filteredItems.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-6 py-4 text-center">
+                        <button onClick={() => toggleFavorite(item.id)} className="transition-transform active:scale-125">
+                          <Heart className={`w-5 h-5 ${item.favori ? 'fill-red-500 text-red-500' : 'text-slate-200 hover:text-red-200'}`} />
+                        </button>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="w-16 h-12 rounded-lg bg-slate-100 overflow-hidden flex items-center justify-center border border-slate-200">
+                          {item.image ? (
+                            <img src={item.image} alt="Appart" className="w-full h-full object-cover" />
+                          ) : (
+                            <ImageIcon className="text-slate-300 w-6 h-6" />
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="font-bold text-slate-900 text-sm">{item.ville}</div>
+                        <div className="text-[10px] md:text-xs text-slate-400 flex items-center gap-1 mt-0.5"><MapPin className="w-3 h-3" /> {item.quartier}</div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className={`font-black text-sm ${item.prix > 350000 ? 'text-red-500' : 'text-slate-900'}`}>{item.prix.toLocaleString()} €</div>
+                        <div className="text-[9px] md:text-[10px] text-indigo-600 font-bold mt-0.5 uppercase tracking-wider">{item.surface ? Math.round(item.prix/item.surface) : 0}€/m²</div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="font-bold text-slate-600 text-sm">{item.surface} m²</div>
+                        <div className="text-[10px] text-slate-400 uppercase font-black">{item.pieces} p.</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <select 
+                          value={item.statut}
+                          onChange={(e) => updateItemStatus(item.id, e.target.value)}
+                          className={`w-full text-[9px] md:text-[10px] font-black uppercase tracking-wider px-3 md:px-4 py-2 md:py-3 rounded-lg md:rounded-xl border-2 transition-all appearance-none ${STATUS_OPTIONS.find(s => s.label === item.statut)?.color}`}
+                          style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'currentColor\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\' /%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '0.6rem' }}
+                        >
+                          {STATUS_OPTIONS.map(opt => <option key={opt.label} value={opt.label}>{opt.label}</option>)}
+                        </select>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex justify-end gap-1 md:gap-2">
+                          <button onClick={() => openEditModal(item)} className="p-2 md:p-3 bg-amber-50 text-amber-600 rounded-lg md:rounded-2xl hover:bg-amber-100"><Pencil className="w-3.5 h-3.5 md:w-4 md:h-4" /></button>
+                          <a href={item.lien} target="_blank" rel="noopener noreferrer" className="p-2 md:p-3 bg-indigo-50 text-indigo-600 rounded-lg md:rounded-2xl hover:bg-indigo-100"><ExternalLink className="w-3.5 h-3.5 md:w-4 md:h-4" /></a>
+                          <button onClick={() => setItems(items.filter(i => i.id !== item.id))} className="p-2 md:p-3 bg-red-50 text-red-500 rounded-lg md:rounded-2xl hover:bg-red-100"><Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+            {filteredItems.map((item) => (
+              <div key={item.id} className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all relative group">
+                {/* Image Section */}
+                <div className="h-48 bg-slate-100 relative overflow-hidden">
+                  {item.image ? (
+                    <img src={item.image} alt="Appart" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-300">
+                      <Camera className="w-10 h-10 mb-2" />
+                      <span className="text-[10px] font-bold uppercase tracking-widest">Pas de photo</span>
+                    </div>
+                  )}
+                  <div className="absolute top-4 left-4 right-4 flex justify-between z-10">
+                    <button onClick={() => toggleFavorite(item.id)} className="p-2 bg-white/90 backdrop-blur shadow-sm rounded-xl hover:scale-110 transition-transform">
+                      <Heart className={`w-5 h-5 ${item.favori ? 'fill-red-500 text-red-500' : 'text-slate-300'}`} />
+                    </button>
+                    <button onClick={() => openEditModal(item)} className="p-2 bg-white/90 backdrop-blur shadow-sm rounded-xl text-slate-400 hover:text-amber-500 transition-colors">
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-6 md:p-8">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <span className="text-indigo-600 font-black text-base md:text-lg">{item.ville}</span>
+                      <p className="text-slate-400 text-[9px] font-black uppercase tracking-wider flex items-center gap-1 mt-0.5"><MapPin className="w-3 h-3" /> {item.quartier}</p>
+                    </div>
+                  </div>
+                  
+                  <div className={`text-2xl md:text-4xl font-black mb-2 ${item.prix > 350000 ? 'text-red-500' : 'text-slate-900'}`}>{item.prix.toLocaleString()} €</div>
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-500 mb-4">
+                    <span className="bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">{item.surface} m²</span>
+                    <span className="bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">{item.pieces}p</span>
+                    <span className="text-indigo-600 font-black ml-auto">{item.surface ? Math.round(item.prix/item.surface) : 0}€/m²</span>
+                  </div>
+                  
+                  <div className="p-4 bg-slate-50 rounded-xl text-[11px] text-slate-500 italic mb-6 min-h-[60px] leading-relaxed border border-slate-50 text-center">
+                    "{item.notes || 'Pas de notes...'}"
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <a href={item.lien} target="_blank" rel="noopener noreferrer" className="flex-1 bg-slate-900 text-white text-center py-3 rounded-xl font-bold text-xs shadow-lg shadow-slate-100 hover:bg-indigo-600 transition-colors">Annonce</a>
+                    <div className={`flex items-center justify-center p-3 rounded-xl border-2 ${STATUS_OPTIONS.find(s => s.label === item.statut)?.color}`}>
+                      {STATUS_OPTIONS.find(s => s.label === item.statut)?.icon}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </main>
+
+      {/* --- MODAL RESPONSIVE --- */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 transition-all animate-in fade-in duration-300">
+          <div className="bg-white rounded-t-[2rem] sm:rounded-[3rem] w-full max-w-xl max-h-[95vh] sm:max-h-[90vh] shadow-2xl overflow-y-auto p-6 md:p-10 relative font-sans">
+            <button onClick={() => setIsModalOpen(false)} className="absolute top-6 right-8 text-slate-300 hover:text-slate-500">
+              <Plus className="w-6 h-6 rotate-45" />
+            </button>
+            <h2 className="text-2xl md:text-3xl font-black mb-1 tracking-tight pr-8">{editingItem ? "Modifier le bien" : "Ajouter un bien"}</h2>
+            <p className="text-slate-400 font-bold text-[9px] md:text-[10px] uppercase tracking-widest mb-6 md:mb-10">Nassim & Sarah • Saisie Manuelle</p>
+            
+            <div className="space-y-4 md:space-y-6">
+              {/* IMAGE INPUT */}
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 md:ml-5 mb-1.5 md:mb-2 block">Lien de la photo (Clic droit sur l'image {' > '} Copier l'adresse)</label>
+                <div className="relative group">
+                   <input type="url" placeholder="https://..." className="w-full p-4 md:p-5 bg-slate-50 border-transparent rounded-xl md:rounded-2xl focus:ring-4 focus:ring-indigo-100 transition-all font-medium text-xs pr-12 text-slate-900" value={formState.image} onChange={e => setFormState({...formState, image: e.target.value})} />
+                   <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300">
+                     <Camera className="w-5 h-5" />
+                   </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 md:ml-5 mb-1.5 md:mb-2 block">Lien de l'annonce</label>
+                <input type="url" placeholder="Lien SeLoger, LeBonCoin..." className="w-full p-4 md:p-5 bg-slate-50 border-transparent rounded-xl md:rounded-2xl focus:ring-4 focus:ring-indigo-100 transition-all font-medium text-xs text-slate-900" value={formState.lien} onChange={e => setFormState({...formState, lien: e.target.value})} />
+              </div>
+
+              <div className="grid grid-cols-1 xs:grid-cols-2 gap-4 md:gap-6">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 md:ml-5 mb-1.5 md:mb-2 block">Ville</label>
+                  <select className="w-full p-4 bg-slate-50 rounded-xl md:rounded-2xl border-none font-bold text-sm text-slate-900" value={formState.ville} onChange={e => setFormState({...formState, ville: e.target.value})}>
+                    <option>Chaville</option>
+                    <option>Viroflay</option>
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <button type="button" onClick={() => setFormState({...formState, favori: !formState.favori})} className={`flex items-center justify-center gap-3 px-6 py-4 rounded-xl md:rounded-2xl font-bold text-xs uppercase tracking-widest transition-all w-full border-2 ${formState.favori ? 'bg-red-50 text-red-500 border-red-100 shadow-sm' : 'bg-slate-50 text-slate-400 border-transparent'}`}>
+                    <Heart className={`w-4 h-4 ${formState.favori ? 'fill-red-500 text-red-500' : ''}`} /> {formState.favori ? "Coup de cœur" : "Mettre Fav"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 md:gap-6">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 md:ml-5 mb-1.5 md:mb-2 block">Prix (€)</label>
+                  <input type="number" className="w-full p-4 bg-slate-50 border-none rounded-xl md:rounded-2xl font-black text-base md:text-lg text-slate-900" value={formState.prix} onChange={e => setFormState({...formState, prix: Number(e.target.value)})} />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 md:ml-5 mb-1.5 md:mb-2 block">Surface (m²)</label>
+                  <input type="number" className="w-full p-4 bg-slate-50 border-none rounded-xl md:rounded-2xl font-black text-base md:text-lg text-slate-900" value={formState.surface} onChange={e => setFormState({...formState, surface: Number(e.target.value)})} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 md:gap-6">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 md:ml-5 mb-1.5 md:mb-2 block">Travaux / État</label>
+                  <input type="text" placeholder="ex: Rafraîchissement" className="w-full p-4 bg-slate-50 border-none rounded-xl md:rounded-2xl font-bold text-xs md:text-sm text-slate-900" value={formState.travaux} onChange={e => setFormState({...formState, travaux: e.target.value})} />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 md:ml-5 mb-1.5 md:mb-2 block">Quartier précis</label>
+                  <input type="text" placeholder="ex: Rive Droite" className="w-full p-4 bg-slate-50 border-none rounded-xl md:rounded-2xl font-bold text-xs md:text-sm text-slate-900" value={formState.quartier} onChange={e => setFormState({...formState, quartier: e.target.value})} />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4 md:ml-5 mb-1.5 md:mb-2 block">Notes Personnelles</label>
+                <textarea className="w-full p-4 md:p-5 bg-slate-50 border-none rounded-xl md:rounded-2xl h-24 md:h-32 text-xs md:text-sm font-medium leading-relaxed text-slate-900" placeholder="Lumière, vis-à-vis, balcon..." value={formState.notes} onChange={e => setFormState({...formState, notes: e.target.value})} />
+              </div>
+
+              <div className="flex flex-col xs:flex-row gap-3 md:gap-4 mt-6 md:mt-10 pb-4">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="order-2 xs:order-1 flex-1 py-4 md:py-5 font-bold text-slate-400 uppercase text-[10px] md:text-xs tracking-widest hover:text-slate-600 transition-colors">Annuler</button>
+                <button type="button" onClick={handleSave} className="order-1 xs:order-2 flex-1 py-4 md:py-5 bg-indigo-600 text-white font-black rounded-2xl md:rounded-3xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all uppercase text-[10px] md:text-xs tracking-widest">
+                  {editingItem ? "Mettre à jour" : "Ajouter au tracker"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default App;
